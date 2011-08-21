@@ -1,26 +1,26 @@
 # MoonScript - Perky's fork.
 I've made a few changes to the syntax, mainly for myself.
 To call an instance function use :: for example
-```lua
+```
 object::action()
 ```
 
 Defining a function is as follows:
-```lua
+```
 function function_name( args = default ) ->
 ```
 
 Variables are implicitly local, but you can shadow a previously declared variable by
 explicitly calling local
-```lua
+```
 a = 1
 function change_a() ->
 	print( a ) -- 1
 	local a = 2
 	print( a ) -- 2
-	
 print( a ) -- 2
 ```
+
 
 # MoonScript
 
