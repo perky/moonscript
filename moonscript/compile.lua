@@ -108,7 +108,9 @@ Block_ = (function(_parent_0)
             local name = _item_0[_index_0]
             if type(name) == "string" and not self:has_name(name) then
               _len_0 = _len_0 + 1
-              _accum_0[_len_0] = name
+              local _name = name
+              if string.find(name,'local') then _name = string.sub(name,7,-1) end
+              _accum_0[_len_0] = _name
             end
           end
         end

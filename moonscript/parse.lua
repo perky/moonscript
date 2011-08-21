@@ -35,12 +35,14 @@ local Indent = C(S"\t "^0) / count_indent
 local Comment = P"--" * (1 - S"\n")^0 * #Stop
 local Space = _Space * Comment^-1
 local SomeSpace = S" \t"^1 * Comment^-1
+local Function = P("function")
+local End = P('end')
 
 local SpaceBreak = Space * Break
 local EmptyLine = SpaceBreak
 
-local _Name = C(R("az", "AZ", "__") * R("az", "AZ", "09", "__")^0)
-local Name = Space * _Name
+local _Name = C( R("az", "AZ", "__") * R("az", "AZ", "09", "__", "..")^0 )
+local Name = P("local")^-1 * Space * _Name
 
 local Num = P"0x" * R("09", "af", "AF")^1 +
 	R"09"^1 * (P"." * R"09"^1)^-1 * (S"eE" * P"-"^-1 * R"09"^1)^-1
@@ -304,7 +306,7 @@ local build_grammar = wrap(function()
 		CompFor = key"for" * Ct(NameList) * key"in" * (sym"*" * Exp / mark"unpack" + Exp) / mark"for",
 		CompClause = CompFor + key"when" * Exp / mark"when",
 
-		Assign = Ct(AssignableList) * sym"=" * (With + If + Ct(TableBlock + ExpListLow)) / mark"assign",
+		Assign = (Ct(AssignableFunction) + (Ct(AssignableList) * sym"=")) * (With + If + Ct(TableBlock + ExpListLow)) / mark"assign",
 		Update = Assignable * ((sym"..=" + sym"+=" + sym"-=" + sym"*=" + sym"/=" + sym"%=")/trim) * Exp / mark"update",
 
 		-- we can ignore precedence for now
@@ -312,6 +314,8 @@ local build_grammar = wrap(function()
 
 		Assignable = Cmt(DotChain + Chain, check_assignable) + Name,
 		AssignableList = Assignable * (sym"," * Assignable)^0,
+		AssignableFunction = Function * (Cmt(DotChain + Chain, check_assignable) + Name),
+		AssignableFunctionList = AssignableFunction * (sym"," * Assignable)^0,
 
 		Exp = Ct(Value * ((OtherOps + FactorOp + TermOp) * Value)^0) / flatten_or_mark"exp",
 
@@ -352,7 +356,7 @@ local build_grammar = wrap(function()
 		LuaStringOpen = sym"[" * P"="^0 * "[" / trim,
 		LuaStringClose = "]" * P"="^0 * "]",
 
-		Callable = Name + Parens / mark"parens",
+		Callable = -Function * Name + Parens / mark"parens",
 		Parens = sym"(" * Exp * sym")",
 
 		FnArgs = symx"(" * Ct(ExpList^-1) * sym")" + sym"!" * -P"=" * Ct"",
@@ -363,7 +367,7 @@ local build_grammar = wrap(function()
 		-- shorthand dot call for use in with statement
 		DotChain =
 			(sym"." * Cc(-1) * (_Name / mark"dot") * ChainItem^0) / mark"chain" + 
-			(sym"\\" * Cc(-1) * (
+			(sym"::" * Cc(-1) * (
 				(_Name * Invoke / mark"colon") * ChainItem^0 + 
 				(_Name / mark"colon_stub")
 			)) / mark"chain",
@@ -378,8 +382,8 @@ local build_grammar = wrap(function()
 		Slice = symx"[" * (SliceValue + Cc(1)) * sym":" * (SliceValue + Cc"")  *
 			(sym":" * SliceValue)^-1 *sym"]" / mark"slice",
 
-		ColonCall = symx"\\" * (_Name * Invoke) / mark"colon",
-		ColonSuffix = symx"\\" * _Name / mark"colon_stub",
+		ColonCall = symx"::" * (_Name * Invoke) / mark"colon",
+		ColonSuffix = symx"::" * _Name / mark"colon_stub",
 
 		Invoke = FnArgs/mark"call" +
 			SingleString / wrap_func_arg +

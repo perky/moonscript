@@ -115,6 +115,7 @@ line_compile = {
       end
     end
   end,
+  
   update = function(self, node)
     local _, name, op, exp = unpack(node)
     local op_final = op:match("^(.+)=$")
